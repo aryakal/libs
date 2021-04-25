@@ -8,11 +8,13 @@ class LibImage:
     @staticmethod
     def get_image_stat(image_path):
         with Image.open(image_path) as im:
+            width, height = im.size
             dict_info = im._getexif()
+            date_info = None
             if dict_info is not None and 36867 in dict_info:
-                return datetime.strptime(dict_info[36867], "%Y:%m:%d %H:%M:%S")
-            else:
-                return None
+                date_info = datetime.strptime(dict_info[36867], "%Y:%m:%d %H:%M:%S")
+
+            return date_info, width, height
 
     @staticmethod
     def get_all_media_from_folder(from_file_location_dir):
