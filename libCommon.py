@@ -14,6 +14,7 @@ class LibCommon:
     def version():
         return "0.1", datetime(2021, 2, 22)
 
+    # noinspection PyArgumentList
     @staticmethod
     def init_logging(level=logging.INFO, file_path=None, fmt="[%(levelname)-5s], %(asctime)s, %(name)8s, %(message)s"):
         logging.getLogger("service").setLevel(logging.INFO)
@@ -112,10 +113,15 @@ class LibCommon:
         return ext in [".jpg", ".mp4"]
 
     @staticmethod
-    def helper_get_hash_md5(file_path):
+    def helper_get_hash_md5(file_path, block_size=2**20):
+        md5 = hashlib.md5()
         with open(file_path, "rb") as f:
-            data = f.read()
-            return hashlib.md5(data).hexdigest()
+            while True:
+                data = f.read(block_size)
+                if not data:
+                    break
+                md5.update(data)
+        return md5.hexdigest()
 
     @staticmethod
     def helper_get_hash_sha1(file_path):
@@ -173,6 +179,3 @@ class LibCommon:
                     file_path = os.path.join(root_dir, file_name)
                     out_files.append((file_path, file_name))
         return out_files
-
-
-
