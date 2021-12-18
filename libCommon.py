@@ -1,8 +1,13 @@
+"""
+0.2, 17-Dec-21 : Functionality to create Entity and Write zip file in memory.
+"""
 import os
 import logging
 import hashlib
 import time
 import zipfile
+from io import BytesIO
+import json
 from datetime import datetime
 
 
@@ -12,20 +17,17 @@ class LibCommon:
 
     @staticmethod
     def version():
-        return "0.1", datetime(2021, 2, 22)
+        return "0.2", datetime(2021, 12, 17)
 
     # noinspection PyArgumentList
     @staticmethod
     def init_logging(level=logging.INFO, file_path=None, fmt="[%(levelname)-5s], %(asctime)s, %(name)8s, %(message)s"):
-        logging.getLogger("service").setLevel(logging.INFO)
-        logging.getLogger("pyHS100.protocol").setLevel(logging.INFO)
         LibCommon.helper_logging_stop("urllib3.connectionpool")
-        
         handlers = [logging.StreamHandler()]
-        
         if file_path is not None:
             path_dir, path_file = os.path.split(file_path)
-            LibCommon.helper_create_directory(path_dir)
+            if path_dir != "":
+                LibCommon.helper_create_directory(path_dir)
             handlers.append(logging.FileHandler(file_path))
             
         logging.basicConfig(
@@ -179,3 +181,48 @@ class LibCommon:
                     file_path = os.path.join(root_dir, file_name)
                     out_files.append((file_path, file_name))
         return out_files
+
+    @staticmethod
+    def helper_in_memory_zip(path, file_paths, logger=None):
+        in_mem_zip = InMemZip()
+        for file_path, suggested_path in file_paths:
+            in_mem_zip.write(file_path=file_path,
+                             suggested_path=suggested_path)
+            if logger is not None:
+                logger.debug("zip: {}".format(suggested_path))
+        in_mem_zip.write_to_disk(path)
+
+
+class InMemZip:
+    def __init__(self):
+        self.byte_zip_file = BytesIO()
+        self.zf = zipfile.ZipFile(self.byte_zip_file, "w", zipfile.ZIP_DEFLATED)
+
+    def write(self, file_path, suggested_path):
+        self.zf.write(file_path, suggested_path)
+
+    def writestr(self, file_name, data):
+        self.zf.writestr(file_name, data)
+
+    def get_zip_file(self):
+        self.zf.close()
+        return self.byte_zip_file.getvalue()
+
+    def write_to_disk(self, file_path):
+        with open(file_path, "wb") as f:
+            f.write(self.get_zip_file())
+
+
+class Entity(object):
+    def __init__(self, dict_data):
+        self._r = dict_data
+
+    def __getattr__(self, item):
+        if item in self._r:
+            return self._r[item]
+        return super().__getattribute__(item)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({json.dumps(self._r, indent=True)})"
+
+
